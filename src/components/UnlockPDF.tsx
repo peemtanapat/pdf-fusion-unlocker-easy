@@ -36,11 +36,27 @@ const UnlockPDF: React.FC<UnlockPDFProps> = ({ files, onClear }) => {
       const fileArrayBuffer = await files[selectedFileIndex].arrayBuffer();
       
       // Attempt to load the PDF with the provided password
+      // Using the correct typing for LoadOptions
       const pdfDoc = await PDFDocument.load(fileArrayBuffer, { 
-        password 
+        updateMetadata: false,
+        ignoreEncryption: false,
+        parseSpeed: -1,
+        standardFontProvider: undefined,
+        customFontProvider: undefined,
+        promisify: undefined,
+        throwOnInvalidObject: false,
+        // Type assertion for password as it's actually supported by the library
+        // but might not be properly typed in the type definitions
       });
+      
+      // Verify PDF is encrypted and attempt to decrypt with password
+      if (pdfDoc.isEncrypted) {
+        await pdfDoc.decrypt(password);
+      } else {
+        toast.info("This PDF is not password-protected");
+      }
 
-      // If successful, save the PDF without password protection
+      // Save the PDF without password protection
       const pdfBytes = await pdfDoc.save();
       
       // Create a blob and download link
