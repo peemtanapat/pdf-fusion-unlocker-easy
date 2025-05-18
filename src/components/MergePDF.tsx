@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -53,7 +52,6 @@ const MergePDF: React.FC<MergePDFProps> = ({ files, onClear }) => {
       document.body.removeChild(downloadLink);
       
       toast.success("PDFs merged successfully!");
-      onClear(); // Clear files after successful merge
     } catch (error) {
       console.error("Error merging PDFs:", error);
       toast.error("Failed to merge PDFs. Please try again.");

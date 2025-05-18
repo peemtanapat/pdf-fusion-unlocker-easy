@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -74,7 +73,7 @@ const UnlockPDF: React.FC<UnlockPDFProps> = ({ files, onClear }) => {
       document.body.removeChild(downloadLink);
       
       toast.success("PDF unlocked successfully!");
-      onClear(); // Clear files after successful unlock
+      // Removed onClear() call to keep files after unlocking
     } catch (error) {
       console.error("Error unlocking PDF:", error);
       toast.error("Failed to unlock PDF. Please check the password and try again.");

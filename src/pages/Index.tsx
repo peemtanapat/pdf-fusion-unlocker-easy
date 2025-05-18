@@ -5,6 +5,8 @@ import PDFUploader from "@/components/PDFUploader";
 import MergePDF from "@/components/MergePDF";
 import UnlockPDF from "@/components/UnlockPDF";
 import { Toaster } from "@/components/ui/sonner";
+import { Button } from "@/components/ui/button";
+import { Trash2 } from "lucide-react";
 
 const Index = () => {
   const [files, setFiles] = useState<File[]>([]);
@@ -31,6 +33,18 @@ const Index = () => {
         
         {files.length > 0 && (
           <div className="mt-8">
+            <div className="flex justify-end mb-4">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={clearFiles}
+                className="text-red-500 hover:text-red-600 hover:bg-red-50"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Clear All Files
+              </Button>
+            </div>
+            
             <Tabs defaultValue="merge" className="w-full">
               <TabsList className="grid w-full grid-cols-2 mb-6">
                 <TabsTrigger value="merge">Merge PDFs</TabsTrigger>
