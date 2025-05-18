@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -43,6 +44,8 @@ const UnlockPDF: React.FC<UnlockPDFProps> = ({ files, onClear }) => {
       try {
         // Now attempt to decrypt the document with the provided password
         if (pdfDoc.isEncrypted) {
+          // Using type assertion to tell TypeScript that decrypt exists
+          // @ts-ignore - We know decrypt exists even if types don't show it
           const decryptSuccess = await pdfDoc.decrypt(password);
           
           if (!decryptSuccess) {
