@@ -34,49 +34,59 @@ const UnlockPDF: React.FC<UnlockPDFProps> = ({ files, onClear }) => {
       // Load the selected PDF file
       const fileArrayBuffer = await files[selectedFileIndex].arrayBuffer();
       
-      // Attempt to load the PDF with the provided password
-      // Using the correct typing for LoadOptions
+      // First attempt to load with ignoreEncryption set to true
+      // This allows us to load the encrypted document
       const pdfDoc = await PDFDocument.load(fileArrayBuffer, { 
-        updateMetadata: false,
-        ignoreEncryption: false,
-        parseSpeed: -1,
-        standardFontProvider: undefined,
-        customFontProvider: undefined,
-        promisify: undefined,
-        throwOnInvalidObject: false,
-        // Type assertion for password as it's actually supported by the library
-        // but might not be properly typed in the type definitions
+        ignoreEncryption: true 
       });
       
-      // Verify PDF is encrypted and attempt to decrypt with password
-      if (pdfDoc.isEncrypted) {
-        await pdfDoc.decrypt(password);
-      } else {
-        toast.info("This PDF is not password-protected");
+      try {
+        // Now attempt to decrypt the document with the provided password
+        if (pdfDoc.isEncrypted) {
+          const decryptSuccess = await pdfDoc.decrypt(password);
+          
+          if (!decryptSuccess) {
+            toast.error("Incorrect password. Please try again.");
+            setIsProcessing(false);
+            return;
+          }
+        } else {
+          toast.info("This PDF is not password-protected");
+        }
+        
+        // Create a new document to get a clean, unencrypted version
+        const newPdfDoc = await PDFDocument.create();
+        
+        // Copy pages from the decrypted document to the new document
+        const pages = await newPdfDoc.copyPages(pdfDoc, pdfDoc.getPageIndices());
+        pages.forEach(page => newPdfDoc.addPage(page));
+        
+        // Save the PDF without password protection
+        const pdfBytes = await newPdfDoc.save();
+        
+        // Create a blob and download link
+        const blob = new Blob([pdfBytes], { type: "application/pdf" });
+        const downloadLink = document.createElement("a");
+        downloadLink.href = URL.createObjectURL(blob);
+        
+        // Create a filename by adding "-unlocked" before the extension
+        const fileName = files[selectedFileIndex].name;
+        const unlockFileName = fileName.replace(".pdf", "-unlocked.pdf");
+        
+        downloadLink.download = unlockFileName;
+        document.body.appendChild(downloadLink);
+        downloadLink.click();
+        document.body.removeChild(downloadLink);
+        
+        toast.success("PDF unlocked successfully!");
+        // Keeping files after unlocking
+      } catch (error) {
+        console.error("Error decrypting PDF:", error);
+        toast.error("Failed to decrypt PDF. Please check the password and try again.");
       }
-
-      // Save the PDF without password protection
-      const pdfBytes = await pdfDoc.save();
-      
-      // Create a blob and download link
-      const blob = new Blob([pdfBytes], { type: "application/pdf" });
-      const downloadLink = document.createElement("a");
-      downloadLink.href = URL.createObjectURL(blob);
-      
-      // Create a filename by adding "-unlocked" before the extension
-      const fileName = files[selectedFileIndex].name;
-      const unlockFileName = fileName.replace(".pdf", "-unlocked.pdf");
-      
-      downloadLink.download = unlockFileName;
-      document.body.appendChild(downloadLink);
-      downloadLink.click();
-      document.body.removeChild(downloadLink);
-      
-      toast.success("PDF unlocked successfully!");
-      // Removed onClear() call to keep files after unlocking
     } catch (error) {
       console.error("Error unlocking PDF:", error);
-      toast.error("Failed to unlock PDF. Please check the password and try again.");
+      toast.error("Failed to unlock PDF. The file might be corrupted or invalid.");
     } finally {
       setIsProcessing(false);
     }
