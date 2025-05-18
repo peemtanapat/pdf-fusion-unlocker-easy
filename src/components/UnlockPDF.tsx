@@ -35,27 +35,16 @@ const UnlockPDF: React.FC<UnlockPDFProps> = ({ files, onClear }) => {
       // Load the selected PDF file
       const fileArrayBuffer = await files[selectedFileIndex].arrayBuffer();
       
-      // First attempt to load with ignoreEncryption set to true
-      // This allows us to load the encrypted document
-      const pdfDoc = await PDFDocument.load(fileArrayBuffer, { 
-        ignoreEncryption: true 
-      });
+      let pdfDoc;
       
       try {
-        // Now attempt to decrypt the document with the provided password
-        if (pdfDoc.isEncrypted) {
-          // Using type assertion to tell TypeScript that decrypt exists
-          // @ts-ignore - We know decrypt exists even if types don't show it
-          const decryptSuccess = await pdfDoc.decrypt(password);
-          
-          if (!decryptSuccess) {
-            toast.error("Incorrect password. Please try again.");
-            setIsProcessing(false);
-            return;
-          }
-        } else {
-          toast.info("This PDF is not password-protected");
-        }
+        // First try to load the document with the provided password
+        pdfDoc = await PDFDocument.load(fileArrayBuffer, { 
+          password: password 
+        });
+        
+        // If we get here, password was correct
+        console.log("PDF loaded successfully with password");
         
         // Create a new document to get a clean, unencrypted version
         const newPdfDoc = await PDFDocument.create();
@@ -82,10 +71,27 @@ const UnlockPDF: React.FC<UnlockPDFProps> = ({ files, onClear }) => {
         document.body.removeChild(downloadLink);
         
         toast.success("PDF unlocked successfully!");
-        // Keeping files after unlocking
       } catch (error) {
-        console.error("Error decrypting PDF:", error);
-        toast.error("Failed to decrypt PDF. Please check the password and try again.");
+        console.error("Error loading PDF with password:", error);
+        
+        // Check if the PDF is actually encrypted
+        try {
+          // Try to load with ignoreEncryption to check if it's actually protected
+          const checkDoc = await PDFDocument.load(fileArrayBuffer, { 
+            ignoreEncryption: true 
+          });
+          
+          if (!checkDoc.isEncrypted) {
+            toast.info("This PDF is not password-protected");
+            setIsProcessing(false);
+            return;
+          }
+          
+          toast.error("Incorrect password. Please try again.");
+        } catch (checkError) {
+          console.error("Error checking PDF encryption:", checkError);
+          toast.error("Failed to unlock PDF. The file might be corrupted or invalid.");
+        }
       }
     } catch (error) {
       console.error("Error unlocking PDF:", error);
