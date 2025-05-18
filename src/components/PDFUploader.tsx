@@ -1,9 +1,10 @@
 
 import React, { useCallback } from "react";
 import { useDropzone } from "react-dropzone";
+import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Files } from "lucide-react";
+import { Files, Move } from "lucide-react";
 
 interface PDFUploaderProps {
   onFilesSelected: (files: File[]) => void;
@@ -34,6 +35,29 @@ const PDFUploader: React.FC<PDFUploaderProps> = ({ onFilesSelected, files }) => 
     const newFiles = [...files];
     newFiles.splice(index, 1);
     onFilesSelected(newFiles);
+  };
+
+  const onDragEnd = (result: any) => {
+    // Dropped outside the list
+    if (!result.destination) {
+      return;
+    }
+
+    const reorderedFiles = reorderFiles(
+      files,
+      result.source.index,
+      result.destination.index
+    );
+
+    onFilesSelected(reorderedFiles);
+    toast.success("Files reordered successfully");
+  };
+
+  const reorderFiles = (list: File[], startIndex: number, endIndex: number): File[] => {
+    const result = Array.from(list);
+    const [removed] = result.splice(startIndex, 1);
+    result.splice(endIndex, 0, removed);
+    return result;
   };
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -86,31 +110,56 @@ const PDFUploader: React.FC<PDFUploaderProps> = ({ onFilesSelected, files }) => 
             </Button>
           </div>
           
-          <ul className="divide-y divide-gray-200">
-            {files.map((file, index) => (
-              <li key={`${file.name}-${index}`} className="py-3 flex justify-between items-center">
-                <div className="flex items-center">
-                  <span className="text-pdf-blue mr-2">
-                    <Files size={20} />
-                  </span>
-                  <div className="ml-2">
-                    <p className="text-sm font-medium text-gray-800">{file.name}</p>
-                    <p className="text-xs text-gray-500">
-                      {(file.size / 1024 / 1024).toFixed(2)} MB
-                    </p>
-                  </div>
-                </div>
-                <Button
-                  variant="ghost" 
-                  size="sm"
-                  onClick={() => removeFile(index)}
-                  className="text-gray-400 hover:text-red-500"
+          <DragDropContext onDragEnd={onDragEnd}>
+            <Droppable droppableId="pdf-files">
+              {(provided) => (
+                <ul 
+                  className="divide-y divide-gray-200"
+                  {...provided.droppableProps}
+                  ref={provided.innerRef}
                 >
-                  Remove
-                </Button>
-              </li>
-            ))}
-          </ul>
+                  {files.map((file, index) => (
+                    <Draggable key={`${file.name}-${index}`} draggableId={`${file.name}-${index}`} index={index}>
+                      {(provided) => (
+                        <li 
+                          ref={provided.innerRef}
+                          {...provided.draggableProps}
+                          className="py-3 flex justify-between items-center group"
+                        >
+                          <div className="flex items-center flex-1">
+                            <div 
+                              {...provided.dragHandleProps}
+                              className="mr-2 p-1 rounded hover:bg-gray-100 cursor-grab"
+                            >
+                              <Move size={16} className="text-gray-400 group-hover:text-pdf-blue" />
+                            </div>
+                            <span className="text-pdf-blue mr-2">
+                              <Files size={20} />
+                            </span>
+                            <div className="ml-2 flex-1 min-w-0">
+                              <p className="text-sm font-medium text-gray-800 truncate">{file.name}</p>
+                              <p className="text-xs text-gray-500">
+                                {(file.size / 1024 / 1024).toFixed(2)} MB
+                              </p>
+                            </div>
+                          </div>
+                          <Button
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => removeFile(index)}
+                            className="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            Remove
+                          </Button>
+                        </li>
+                      )}
+                    </Draggable>
+                  ))}
+                  {provided.placeholder}
+                </ul>
+              )}
+            </Droppable>
+          </DragDropContext>
         </div>
       )}
     </div>
